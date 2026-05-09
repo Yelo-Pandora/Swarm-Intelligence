@@ -1,0 +1,23 @@
+Name: Test Instance with Variable Length and Week Signals
+Courses: 3
+Rooms: 2
+Days: 5
+Periods_per_day: 5
+Curricula: 1
+Constraints: 0
+
+COURSES:
+c0001 t1 2 1 30 2 0
+c0002 t1 2 1 40 4 1
+c0003 t2 1 1 20 3 2
+
+ROOMS:
+r001 50
+r002 30
+
+CURRICULA:
+cur1 2 c0001 c0002
+
+UNAVAILABILITY_CONSTRAINTS:
+
+END.
