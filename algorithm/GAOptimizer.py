@@ -1,4 +1,6 @@
 import csv
+import os
+import sys
 import random
 import copy
 import math
@@ -580,6 +582,9 @@ class MDGAOptimizer:
                     'best_hc': best_curr[2],
                     'best_sc': best_curr[3],
                     'hc_weight': self.evaluator.hc_weight,
+                    'chromosome': best_curr[0],
+                    'hc_violated_indices': best_curr[4],
+                    'sc_violated_indices': best_curr[5],
                 })
 
             if gen < 500 and best_curr[2] > 0:
@@ -598,7 +603,7 @@ class MDGAOptimizer:
             if stagnation_counter >= 30 and best_curr[2] > 0:
                 self.evaluator.hc_weight = min(100000, self.evaluator.hc_weight * 2)
                 stagnation_counter = 0
-                print(f"  --> [系统警报] 陷入死锁 (HC={best_curr[2]})！释放核武...")
+                print(f"  --> [系统警报] 陷入死锁 (HC={best_curr[2]})，执行修复...")
 
                 repaired_elite = self._ejection_chain_repair(copy.deepcopy(best_curr[0]), best_curr[4])
                 current_pop[0] = repaired_elite
@@ -622,7 +627,7 @@ class MDGAOptimizer:
                     f"Gen {gen:4d} | Fit: {best_curr[1]:7d} | HC: {best_curr[2]:3d} | SC: {best_curr[3]:3d} | HC_W: {self.evaluator.hc_weight}")
 
             if best_curr[2] == 0 and best_curr[3] == 0:
-                print(f"\n🎉 奇迹出现！提前终止。")
+                print(f"\n训练已提前终止。")
                 break
 
             new_pop = []
@@ -723,24 +728,57 @@ def export_solution_to_csv(best_solution, parser, filename="timetable_result.csv
         for row in export_data:
             writer.writerow(row)
 
-    print(f"\n✅ 课表已成功导出至当前目录下的: {filename}")
+    print(f"\n课表已成功导出至: {filename}")
 
 
 # ================= 测试与执行入口 =================
 if __name__ == "__main__":
+    import argparse
+
     from CTTParser import CTTParser
     from PopulationInitializer import PopulationInitializer
 
+    parser_args = argparse.ArgumentParser()
+    parser_args.add_argument('--visualize', action='store_true', help='显示训练过程中的教室课表可视化')
+    parser_args.add_argument('--visualize-every', type=int, default=5, help='每隔多少代刷新一次可视化')
+    parser_args.add_argument('--dataset', default='comp21.ctt', help='训练使用的 CTT 数据文件')
+    parser_args.add_argument('--pop-size', type=int, default=50, help='初始种群大小')
+    parser_args.add_argument('--max-gen', type=int, default=300000, help='最大迭代代数')
+    args = parser_args.parse_args()
+
+    visualizer = None
+    progress_callback = None
+
+    if args.visualize:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+        from Visualization import TrainingProcessVisualizer
+
     # 1. 解析数据
-    parser = CTTParser('comp21.ctt')
+    dataset_path = args.dataset
+    if not os.path.isabs(dataset_path) and not os.path.exists(dataset_path):
+        alt_dataset_path = os.path.join(os.path.dirname(__file__), dataset_path)
+        if os.path.exists(alt_dataset_path):
+            dataset_path = alt_dataset_path
+    parser = CTTParser(dataset_path)
+
+    if args.visualize:
+        visualizer = TrainingProcessVisualizer(parser, update_every=args.visualize_every)
+        progress_callback = visualizer
 
     # 2. 初始化种群
-    initializer = PopulationInitializer(parser, pop_size=50)
+    initializer = PopulationInitializer(parser, pop_size=args.pop_size)
     initial_pop = initializer.initialize_population()
 
-    # 3. 运行优化器 (这里以 3000 代为例)
-    optimizer = MDGAOptimizer(parser, initial_pop, max_gen=3000)
-    best_solution = optimizer.run()
+    # 3. 运行优化器
+    optimizer = MDGAOptimizer(parser, initial_pop, max_gen=args.max_gen, progress_callback=progress_callback)
+
+    try:
+        best_solution = optimizer.run()
+    finally:
+        if visualizer:
+            visualizer.close()
 
     # 4. 导出最终结果
     export_solution_to_csv(best_solution, parser, filename="best_timetable.csv")
