@@ -743,7 +743,7 @@ if __name__ == "__main__":
     parser_args.add_argument('--visualize-every', type=int, default=5, help='每隔多少代刷新一次可视化')
     parser_args.add_argument('--dataset', default='comp21.ctt', help='训练使用的 CTT 数据文件')
     parser_args.add_argument('--pop-size', type=int, default=50, help='初始种群大小')
-    parser_args.add_argument('--max-gen', type=int, default=300000, help='最大迭代代数')
+    parser_args.add_argument('--max-gen', type=int, default=30000, help='最大迭代代数')
     args = parser_args.parse_args()
 
     visualizer = None
