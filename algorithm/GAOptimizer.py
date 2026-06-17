@@ -595,13 +595,10 @@ class MDGAOptimizer:
             if best_curr[2] < last_best_hc:
                 last_best_hc = best_curr[2]
                 stagnation_counter = 0
-                if self.evaluator.hc_weight > 1000:
-                    self.evaluator.hc_weight = max(1000, self.evaluator.hc_weight // 2)
             else:
                 stagnation_counter += 1
 
             if stagnation_counter >= 30 and best_curr[2] > 0:
-                self.evaluator.hc_weight = min(100000, self.evaluator.hc_weight * 2)
                 stagnation_counter = 0
                 print(f"  --> [系统警报] 陷入死锁 (HC={best_curr[2]})，执行修复...")
 
